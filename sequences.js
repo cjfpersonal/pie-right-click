@@ -35,17 +35,18 @@ var arc = d3
   .arc()
   .startAngle(function(d) {
     return d.x0;
-  })
+	})
+	.padAngle(.01)
   .endAngle(function(d) {
     return d.x1;
-  })
+	})
   .innerRadius(function(d) {
     if (d.depth) {
       return contentRadius + outsideRadius * (d.depth - 1);
     } else {
       return contentRadius;
     }
-  })
+	})
   .outerRadius(function(d) {
     return contentRadius + outsideRadius * d.depth;
   });
@@ -103,7 +104,6 @@ function createFontLogo(json) {
     .filter(function(d) {
       return d.x1 - d.x0 > 0.005;
     });
-  console.log(root, nodes);
   //文字展示
   vis
     .data([json])
@@ -111,16 +111,17 @@ function createFontLogo(json) {
     .data(nodes)
     .enter()
     .append("g")
-		.attr("class", "node")
-		.attr("text-anchor", "middle")
-
+    .attr("class", "node")
+		.attr("transform",function(d){
+			return "translate(" + arc.centroid(d) + ")"
+		})
     .append("image")
     .attr("href", "./d3.svg");
 
   vis
     .selectAll("g.node")
     .append("text")
-    .attr("font-size", 14)
+    .attr("font-size", 12)
     .attr("text-anchor", "middle")
 
     .append("tspan")
