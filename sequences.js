@@ -4,21 +4,9 @@ var height = 600;
 var radius = 187; // 图的整体半径
 var contentRadius = 50; // 内部空白半径
 var outsideRadius = 100;
-var size = 1;
 
-const visitSequences = [
-  ["全路径-作为起点", size],
-  ["全路径-作为终点", size],
-  ["最短路径-作为起点", size],
-  ["最短路径-作为终点", size],
-  ["实体展开", size * 2],
-  ["图内路径", size * 2],
-  ["折叠", size * 2],
-  ["锁定", size * 2],
-  ["隐藏", size * 2]
-];
 // Mapping of step names to colors.
-var colors = "#E96161";
+var colors = "#5C6273";
 
 var vis = d3
   .select("#chart")
@@ -77,10 +65,8 @@ function createVisualization(json) {
     .append("svg:path")
     .attr("display", function(d) {
       return d.depth == 1 ? null : "none";
-    })
-    .attr("id", (d, i) => {
-      return "path" + i;
-    })
+		})
+		
     .attr("d", arc)
     .style("fill", colors)
     .style("opacity", 0.3)
@@ -103,27 +89,38 @@ function createFontLogo(json) {
     .descendants()
     .filter(function(d) {
       return d.x1 - d.x0 > 0.005;
-    });
-  //文字展示
+		});
+		
+  // 增加g包住circle和text
   vis
     .data([json])
     .selectAll("g")
     .data(nodes)
     .enter()
     .append("g")
-    .attr("class", "node")
+		.attr("class",'node')
+		.attr("display", function(d) {
+      return d.depth == 1 ? null : "none";
+		})
 		.attr("transform",function(d){
 			return "translate(" + arc.centroid(d) + ")"
 		})
-    .append("image")
-    .attr("href", "./d3.svg");
+		.on("mousedown", mouseDown)
+		.append("image")
+		.attr('x', -20)
+		.attr('y', -(outsideRadius)/4)
+    .attr("href", function(d, i) {
+      if (!i) return "";
+      return "./d3.svg"
+    });
 
   vis
-    .selectAll("g.node")
+    .selectAll("g")
     .append("text")
     .attr("font-size", 12)
-    .attr("text-anchor", "middle")
-
+		.attr("text-anchor", "middle")
+		.attr('fill', '#fff')
+		.attr('y', outsideRadius/4)
     .append("tspan")
     .text(function(d, i) {
       if (!i) return "";
@@ -132,23 +129,39 @@ function createFontLogo(json) {
 }
 // Fade all but the current sequence, and show it in the breadcrumb trail.
 function mouseover(d) {
-  var sequenceArray;
+	var sequenceArray;
+	var sequenceParent = [];
   // for depth 2 operation
   if (d.depth > 1) {
+		sequenceParent = d.ancestors().reverse();
     var parent = d.ancestors().reverse();
     parent.shift();
     sequenceArray = parent[0].descendants();
   } else {
     sequenceArray = d.descendants().reverse();
-  }
+	}
+	// 文字和logo对应的g是否展示
+	d3.
+	selectAll('.node')
+	.attr('display', (node) => {
+		sequenceArray.forEach((value) => {
+			if(node.depth > 1 && value.data.key !== node.data.key) {
+				return 'none'
+			} else {
+				return 'null'
+			}
+		})
+	})
+	
+	// 背景隐藏、以及颜色加深
   d3.selectAll("path")
     .style("opacity", 0.3)
     .attr("display", node => {
       if (node.depth > 1 && sequenceArray.indexOf(node) < 0) {
         return "none";
       }
-    });
-
+		});
+		
   vis
     .selectAll("path")
     .filter(function(node) {
@@ -156,59 +169,20 @@ function mouseover(d) {
     })
     .attr("display", null)
     .style("opacity", node => {
-      if (node.depth < d.depth || [d].indexOf(node) > -1) {
+			if ((node.depth < d.depth && sequenceParent.indexOf(node) >= 0) || 
+			[d].indexOf(node) > -1) {
         return 0.7;
       } else {
         return 0.3;
       }
     });
 }
+
 // 触发点击事件
 function mouseDown(d) {
+	console.log(d.data)
   alert(d.data.name);
 }
 
-function buildHierarchy(csv) {
-  var root = { name: "root", children: [] };
-  for (var i = 0; i < csv.length; i++) {
-    var sequence = csv[i][0];
-    var size = +csv[i][1];
-    if (isNaN(size)) {
-      // e.g. if this is a header row
-      continue;
-    }
-    var parts = sequence.split("-");
-    var currentNode = root;
-    for (var j = 0; j < parts.length; j++) {
-      var children = currentNode["children"];
-      var nodeName = parts[j];
-      var childNode;
-      if (j + 1 < parts.length) {
-        // Not yet at the end of the sequence; move down the tree.
-        var foundChild = false;
-        for (var k = 0; k < children.length; k++) {
-          if (children[k]["name"] == nodeName) {
-            childNode = children[k];
-            foundChild = true;
-            break;
-          }
-        }
-        // If we don't already have a child node for this branch, create it.
-        if (!foundChild) {
-          childNode = { name: nodeName, children: [] };
-          children.push(childNode);
-        }
-        currentNode = childNode;
-      } else {
-        // Reached the end of the sequence; create a leaf node.
-        childNode = { name: nodeName, size: size };
-        children.push(childNode);
-      }
-    }
-  }
-  return root;
-}
-
-var json = buildHierarchy(visitSequences);
 createVisualization(json);
 createFontLogo(json);
