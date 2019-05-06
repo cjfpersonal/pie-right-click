@@ -116,23 +116,38 @@ function createVisualization(json) {
 
 // Fade all but the current sequence, and show it in the breadcrumb trail.
 function mouseover(d) {
-	// var children = d.eachAfter()
-	console.log(d)
-	var sequenceArray = d.ancestors().reverse();
-	// console.log(sequenceArray)
-  sequenceArray.shift(); // remove root node from the array
+	var sequenceArray;
+	// for depth 2 operation
+	if(d.depth > 1) {
+		var parent = d.ancestors().reverse()
+		parent.shift()
+		sequenceArray = parent[0].descendants()
+	} else {
+		sequenceArray = d.descendants().reverse();
+	}
+	console.log(d, sequenceArray)
+	d3.selectAll("path")
+	.style("opacity", 0.3)
+	.attr('display', (node) => {
+		if(node.depth > 1 && sequenceArray.indexOf(node) < 0) {
+			return 'none'
+		}
+	});
 
-  // Fade all the segments.
-  d3.selectAll("path").style("opacity", 0.3);
-
-  // Then highlight only those that are an ancestor of the current segment.
   vis
-    .selectAll("path")
+		.selectAll("path")
     .filter(function(node) {
-			// console.log(node)
       return sequenceArray.indexOf(node) >= 0;
 		})
-    .style("opacity", 0.7);
+		.attr('display', null)
+    .style('opacity', (node) => {
+			if(node.depth < d.depth
+				|| [d].indexOf(node) > -1) {
+				return 0.7
+			} else {
+				return 0.3
+			}
+		});
 }
 
 function buildHierarchy(csv) {
